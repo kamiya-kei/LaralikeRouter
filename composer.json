@@ -1,0 +1,9 @@
+{
+    "name": "kamiya-kei/laralike-router",
+    "description": "simple router like laravel",
+    "type": "library",
+    "require": {},
+    "require-dev": {
+        "phpunit/phpunit": "^9.2"
+    }
+}
