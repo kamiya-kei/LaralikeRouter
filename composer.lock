@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7ede86779b60b8ba74de1690d2645213",
+    "content-hash": "f20e9e6cbb2f95327a1d7da6c0876f5c",
     "packages": [],
     "packages-dev": [
         {
@@ -1528,16 +1528,16 @@
         },
         {
             "name": "sebastian/type",
-            "version": "2.2.0",
+            "version": "2.2.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/type.git",
-                "reference": "5f128525681fe000daca56b3fee98373e713f2fb"
+                "reference": "86991e2b33446cd96e648c18bcdb1e95afb2c05a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/type/zipball/5f128525681fe000daca56b3fee98373e713f2fb",
-                "reference": "5f128525681fe000daca56b3fee98373e713f2fb",
+                "url": "https://api.github.com/repos/sebastianbergmann/type/zipball/86991e2b33446cd96e648c18bcdb1e95afb2c05a",
+                "reference": "86991e2b33446cd96e648c18bcdb1e95afb2c05a",
                 "shasum": ""
             },
             "require": {
@@ -1576,7 +1576,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2020-07-05T06:49:10+00:00"
+            "time": "2020-07-05T08:31:53+00:00"
         },
         {
             "name": "sebastian/version",
@@ -1798,7 +1798,9 @@
     "stability-flags": [],
     "prefer-stable": false,
     "prefer-lowest": false,
-    "platform": [],
+    "platform": {
+        "php": "^7.1"
+    },
     "platform-dev": [],
     "plugin-api-version": "1.1.0"
 }
