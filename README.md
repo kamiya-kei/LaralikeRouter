@@ -37,7 +37,7 @@ Route::get('/', function () { echo 'hello milky'; });
 
 require_once 'LaralikeRouter.php';
 
-class_alias(LaralikeRouter::class, 'Route');
+class_alias(\kamiyakei\LaralikeRouter::class, 'Route');
 
 Route::get('/', function () { echo 'hello milky'; });
 ```
