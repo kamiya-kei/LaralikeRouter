@@ -23,7 +23,7 @@ Route::redirect('index.php', '/');
 Route::get('index.html', function () { Route::redirect('/'); });
 
 // コントローラー
-Route::get('/ctrl1', '\App\Controller\TestController::test1');
+Route::get('/ctrl1', '\App\Controller\TestController@test1');
 Route::setNamespace('\\App\\Controller\\');
 Route::get('/ctrl2', 'TestController::test2');
 

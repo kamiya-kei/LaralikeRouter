@@ -38,12 +38,6 @@ class LaralikeRouter
     self::$is_init = true;
   }
 
-  public static function testRoute(string $uri, string $method='get')
-  {
-    self::$uri = $uri;
-    self::$method = strtolower($method);
-  }
-
   public static function defaultFallback()
   {
     if (!headers_sent()) {
@@ -70,16 +64,19 @@ class LaralikeRouter
     self::$uri = substr(self::$uri, strlen($prefix));
   }
 
-  private static function checkCallable($callback): callable
+  private static function getCallable($callback): callable
   {
+    if ('string' === gettype($callback)) {
+      $callback = str_replace('@', '::', $callback);
+    }
     if (is_callable($callback)) {
       return $callback;
     }
-    $callback2 = self::$namespace . $callback;
-    if (is_callable($callback2)) {
-      return $callback2;
+    $callback_ = self::$namespace . $callback;
+    if (is_callable($callback_)) {
+      return $callback_;
     }
-    assert(false, $callback2 . ' is not callable!');
+    assert(false, $callback_ . ' is not callable!');
   }
 
   private static function checkUri($uri, $where)
@@ -121,7 +118,7 @@ class LaralikeRouter
       return !in_array($val, self::METHODS);
     })) === 0, '$methods is incorrect value !');
     self::init();
-    $callback_ = self::checkCallable($callback);
+    $callback_ = self::getCallable($callback);
 
     if (self::$is_found) { return; }
     if (!in_array(self::$method, $methods)) { return; }
@@ -135,7 +132,7 @@ class LaralikeRouter
 
     self::$is_found = true;
     foreach (self::$middleware as $middleware) {
-      $middleware_ = self::checkCallable($middleware);
+      $middleware_ = self::getCallable($middleware);
       call_user_func_array($middleware_, []);
     }
     return call_user_func_array($callback_, $res[1]);
@@ -180,7 +177,7 @@ class LaralikeRouter
   public static function fallback($callback)
   {
     self::init();
-    self::$fallback = self::checkCallable($callback);
+    self::$fallback = self::getCallable($callback);
   }
 
   public static function middleware(array $middleware)
@@ -205,7 +202,7 @@ class LaralikeRouter
     self::setPrefix($prefix);
     if (self::$uri !== '') {
       self::middleware($middleware);
-      $callback_ = self::checkCallable($callback);
+      $callback_ = self::getCallable($callback);
       call_user_func_array($callback_, []);
     }
 
@@ -221,7 +218,7 @@ class LaralikeRouter
   }
 
   /* $jumpto: string|int */
-  public static function redirect(string $uri, $jumpto=301, int $status_code=301)
+  public static function redirect(string $uri, $jumpto=302, int $status_code=302)
   {
     // 引数が1個、または、2個で2個めがintegerの時：即座にリダイレクト
     if (gettype($jumpto) === 'integer') {
@@ -239,19 +236,33 @@ class LaralikeRouter
     });
   }
 
+  public static function permanentRedirect(string $uri, string $jumpto='')
+  {
+    if ('' === $jumpto) {
+      self::redirect($uri, 301);
+    } else {
+      self::redirect($uri, $jumpto, 301);
+    }
+  }
+
   public static function setView($callback)
   {
     self::init();
-    $callback_ = self::checkCallable($callback);
+    $callback_ = self::getCallable($callback);
     self::$view = $callback_;
   }
 
-  public static function view(string $uri, string $viewfile, array $parameters = [])
+  public static function view(string $uri, string $viewfile, array $parameters = [], array $options = [])
   {
     assert(isset(self::$view), 'view is not setting yet. please setView()');
-    echo self::any($uri, function () use ($viewfile, $parameters) {
-      return call_user_func_array(self::$view, [$viewfile, $parameters]);
-    });
+    echo self::match(
+      $options['methods'] ?? self::METHODS,
+      $uri,
+      function () use ($viewfile, $parameters) {
+        return call_user_func_array(self::$view, [$viewfile, $parameters]);
+      },
+      $options
+    );
   }
 
   public static function json(array $data)
