@@ -6,21 +6,24 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 ini_set('assert.exception', '1');
 error_reporting(E_ALL | E_STRICT);
+// $whoops = new Whoops\Run;
+// $whoops->pushHandler(new \Whoops\Handler\PrettyPageHandler);
+// $whoops->register();
 
-if (0 === strpos($_SERVER['REQUEST_URI'], '/tests/')) {
+if (0 === strpos($_SERVER['REQUEST_URI'] ?? '', '/tests/')) {
   // プレフィックス
-  Route::setPrefix('/tests');
+  Route::prefix('/tests');
 }
 
 // 基本的なルーティング
-Route::get('/', function () { echo 'ROOT'; });
-Route::any('/aaa', function () { echo 'AAA'; });
-Route::post('/bbb', function () { echo 'BBB'; });
-Route::match(['get', 'post'], '/ccc/ddd', function () { echo 'CCCDDD'; });
+Route::get('/', function () { return 'ROOT'; });
+Route::any('/aaa', function () { return ['AAA']; });
+Route::post('/bbb', function () { return 'BBB'; });
+Route::match(['get', 'post'], '/ccc/ddd', function () { return 'CCCDDD'; });
 
 // リダイレクトルート
 Route::redirect('index.php', '/');
-Route::get('index.html', function () { Route::redirect('/'); });
+Route::get('index.html', function () { Route::runRedirect('/'); });
 
 // コントローラー
 Route::get('/ctrl1', '\App\Controller\TestController@test1');
@@ -28,41 +31,55 @@ Route::setNamespace('\\App\\Controller\\');
 Route::get('/ctrl2', 'TestController::test2');
 
 // 必須パラメータ
-Route::get('user/{id}', function ($id) { echo 'UserId: ' . $id; });
+Route::get('user/{id}', function ($id) { return 'UserId: ' . $id; });
 Route::get('posts/{post}/comments/{comment}', function ($postId, $commentId) {
-  echo $postId . '-' . $commentId;
+  return $postId . '-' . $commentId;
 });
 
 // 任意パラメータ
 Route::get('username/{name?}', function ($name = 'lala') {
-  echo 'NAME: ' . $name;
+  return 'NAME: ' . $name;
 });
 
 // 正規表現制約
 Route::get('userage/{age}', function ($age) {
-  echo 'AGE: ' . (string)$age;
-}, ['where' => ['age' => '[0-9]+']]);
+  return 'AGE: ' . (string)$age;
+})->where(['age' => '[0-9]+']);
 
 // ルートグループ
-Route::group('/group1', [function () { echo 'GROUP 1 '; }], function () {
-  define('GROUP_VAR', 'BAR');
-  Route::get('/foo', function () { echo 'FOO'; });
-  Route::get('/bar', function () { echo GROUP_VAR; });
-});
-Route::group('group2', [], function () {
-  Route::middleware([ function () { echo 'GROUP 2 '; }]);
-  define('GROUP_VAR', 'BAZ');
-  Route::get('/baz', function () { echo GROUP_VAR; });
-  Route::group('/nest', [function () { echo 'NEST '; }], function () {
-    Route::get('/hoge', function () { echo 'HOGE'; });
-    Route::get('/fuga', function () { echo 'FUGA'; });
+Route::prefix('group1')
+  ->middleware([function () { echo 'GROUP 1 '; }])
+  ->group(function () {
+    define('GROUP_VAR', 'BAR');
+    Route::get('/foo', function () { echo 'FOO'; });
+    Route::get('/bar', function () { return GROUP_VAR; });
   });
-});
+
+Route::middleware([function () { return 'GROUP 2 '; }])
+  ->prefix('/group2')
+  ->group(function () {
+    define('GROUP_VAR', 'BAZ');
+    Route::get('/baz', function () { return GROUP_VAR; });
+    Route::prefix('/nest')
+      ->middleware([function () { return 'NEST '; }])
+      ->group(function () {
+        Route::get('/hoge', function () { return 'HOGE'; });
+        Route::get('/fuga', function () { echo 'FUGA'; });
+      });
+      Route::prefix('/nest2')
+      ->middleware([function () { return 'NEST '; }])
+      ->group(function () {
+        Route::get('/hoge', function () { return 'HOGE'; });
+        Route::get('/fuga', function () { echo 'FUGA'; });
+      });
+
+
+  });
 
 // ルートグループ内のリダイレクトルート
-Route::group('/redirect', [], function () {
-  Route::get('/', function () { echo 'REDIRECT'; });
-  Route::get('/index.php', function () { Route::redirect('/'); });
+Route::prefix('/redirect')->group(function () {
+  Route::get('/', function () { return 'REDIRECT'; });
+  Route::get('/index.php', function () { Route::runRedirect('/'); });
   Route::redirect('/index.html', '/');
 });
 
@@ -70,7 +87,7 @@ Route::group('/redirect', [], function () {
 // Route:fallback()を呼んでない時はRoute::defaultFallback()が呼ばれる
 if (isset($_GET['fallback'])) {
   // カスタム404
-  Route::fallback(function () { echo '404 !'; });
+  Route::fallback(function () { return '404 !'; });
 }
 
 // ビュー
@@ -82,20 +99,8 @@ function view ($viewfile, $parameters) {
   return $twig->render($viewfile, $parameters);
 }
 Route::setView('view');
-Route::group('/view', [], function () {
-  Route::get('/twig1', function () { echo view('test.html.twig', ['name' => 'lala']); });
+Route::prefix('/view')->group(function () {
+  Route::get('/twig1', function () { return view('test.html.twig', ['name' => 'lala']); });
   Route::view('/twig2', 'test.html.twig', ['name' => 'milky']);
-  Route::get('/json', function () { echo Route::json(['name' => 'star']); });
+  Route::get('/json', function () { return ['name' => 'star']; });
 });
-
-// コンフィグ
-Route::config('sqlite', 'foo.db');
-Route::get('/config-foo', function () { echo Route::config('sqlite'); });
-Route::config('sqlite', 'bar.db');
-Route::get('/config-bar', function () { echo Route::config('sqlite'); });
-Route::group('/config', [
-  function () { Route::config('sqlite', 'baz.db'); }
-], function () {
-  Route::get('/', function () { echo Route::config('sqlite'); });
-});
-Route::get('/config-bar2', function () { echo Route::config('sqlite'); });

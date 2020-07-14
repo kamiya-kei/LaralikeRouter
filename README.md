@@ -26,11 +26,7 @@ require_once 'vendor/autoload.php';
 Route::get('/', function () { echo 'hello milky'; });
 ```
 
-### 方法2： ファイルをDLして利用する方法
 
-当ライブラリの実態は`LaralikeRouter.php`1ファイルのみで特に他のものに依存していない為、以下からファイルをDLして配置して簡単に使えます。
-
-[LaralikeRouter.php](https://raw.githubusercontent.com/kamiya-kei/LaralikeRouter/master/src/LaralikeRouter.php)
 
 ```php
 <?php
@@ -53,20 +49,21 @@ RewriteRule ^ index.php [L]
 
 ## 使い方
 
-ほとんど[Laravelのルーティング](https://readouble.com/laravel/7.x/ja/routing.html)と同じ使い方ですが、実装をシンプルにする為、メソッドチェーンは使えません。
+ほとんど[Laravelのルーティング](https://readouble.com/laravel/7.x/ja/routing.html)と同じ使い方です。
 
 ### 基本的なルーティング
-
-Laravelと違い、callback関数内で`return`しても出力されないので、直接`echo`する必要があります。
 
 第1引数は、`/`から始めても、`/`から始めなくても、同じ様に動作します。
 
 ```php
-Route::get('/', function () { echo 'hello milky'; });
-// NG: Route::get('/', function () { return 'hello milky'; });
+Route::get('/', function () { return 'hello milky'; });
 
-Route::get('/foo', function () { echo 'FOO'; });
-Route::get('bar', function () { echo 'BAR'; });
+Route::get('/foo', function () { return 'FOO'; });
+Route::get('bar', function () { return 'BAR'; });
+
+// returnされた値がarray型の場合は、
+// `Content-Type: application/json`ヘッダを出力して、戻り値をjson_encodeして出力します。
+Route::get('baz', function () { return ['BAZ']; });
 ```
 
 コントローラーを利用する場合は以下の様にします。メソッドの前は`@`ではなく`::`でもOKです。
@@ -109,15 +106,14 @@ Route::permanentRedirect('/here', '/there'); // 301
 Laravelには無い記法ですが、以下の様にも使用できます。
 
 ```php
-Route::get('/here', function () { Route::redirect('/there'); }); // 302
-Route::get('/here', function () { Route::redirect('/there', 301); });
-Route::get('/here', function () { Route::permanentRedirect('/there'); }); // 301
+Route::get('/here', function () { Route::runRedirect('/there'); }); // 302
+Route::get('/here', function () { Route::runRedirect('/there', 301); });
 ```
 
 ルートグループ内で使った場合は以下の様に動作します。
 
 ```php
-Route::group('/foo', [], function () {
+Route::prefix('/foo')->group(function () {
 	Route::redirect('/here', '/there'); // `/foo/here` => `/foo/there`
 });
 ```
@@ -135,14 +131,10 @@ function view ($viewfile, $parameters) {
   return $twig->render($viewfile, $parameters);
 }
 Route::setView('view');
-Route::group('/view', [], function () {
-  // Route::json($list)はテンプレートエンジンライブラリを入れなくても使えます。
-  // `Content-Type: application/json`ヘッダを出力して、`$list`を`json_encode`して出力します。
-  Route::get('/json', function () { echo Route::json(['name' => 'star']); });
+Route::prefix('/view')->group(function () {
   // 以下の様に使用するなら`Route::setView`は不要です。
   Route::get('/twig1', function () { echo view('test.html.twig', ['name' => 'lala']); });
   // 以下の様ビュールートを使用する場合は`Route::setView`で予め設定する必要がある。
-  // 第4引数で`where`も`['where' => ['id' => '[0-9]+']]`の様に設定できます。
   Route::view('/twig2', 'test.html.twig', ['name' => 'milky']);
 });
 ```
@@ -188,51 +180,48 @@ Route::get('user/{name?}', function ($name = 'lala') {
 ```php
 Route::get('user/{id}', function ($id) {
     //
-}, ['where' => ['id' => '[0-9]+']];
+})->where(['id' => '[0-9]+']);
 
 Route::get('user/{id}/{name}', function ($id) {
     //
-}, ['where' => ['id' => '[0-9]+', 'name' => '[a-z]+']];
+})->where(['where' => ['id' => '[0-9]+', 'name' => '[a-z]+']);
 ```
 
 
 
 ### ルートグループ
 
-ルートグループはLaravelと違って以下の様に定義します。
-
-第1引数がプレフィックス、第2引数がミドルウェア、第3引数がコールバックです。
+ルートグループは以下の様に定義します。
 
 ネストにも対応しています。
 
 ```php
-// ミドルウェアなし
-Route::group('/foo', [], function () {
+Route::prefix('/foo')->group(function () {
     // `/foo/bar`で`FOOBAR`と出力される
 	Route::get('/bar', function () { echo 'FOOBAR' });
 });
 
-// ミドルウェアあり
-Route::group('/hello', [
-	function () { echo 'Hello '; }
-], function () {
+Route::middleware([function () { echo 'Hello '; }])
+  ->prefix('/hello')
+  ->group(function () {
     // `hello/lala`で`Hello lala`と出力される
-	Route::get('/lala', function () { echo 'lala'; });
+    Route::get('/lala', function () { echo 'lala'; });
     // `hello/hikaru`で`Hello hikaru`と出力される
     Route::get('/hikaru', function () { echo 'hikaru'; });
 });
 
 //　ネスト
-Route::group('/hello', [
-    function () { echo 'Hello '; }
-], function () {
-    Route::group('/cure', [
-        function () { echo 'Cure '; }
-    ], function () {
-        // `hello/cure/milky`で`Hello Cure Milky`と出力される
-        Route::get('/milky', function () { echo 'Milky'; });
-    });
-});
+Route::prefix('/hello')
+  ->middleware([function () { echo 'Hello '; }])
+  ->group(function () {
+    Route::prefix('/cure')
+      ->middleware([function () { echo 'Cure '; }])
+      ->group(function () {
+          // `hello/cure/milky`で`Hello Cure Milky`と出力される
+          Route::get('/milky', function () { echo 'Milky'; });
+      });
+  });
+
 ```
 
 ### フォールバックルート (404 Not Found)
@@ -247,14 +236,12 @@ Route::fallback(function () {
 
 定義しなかった場合、自動で`Route::defaultFallback()`が呼ばれます。
 
-`defaultFallback`の中身は以下の様になっており、`register_shutdown_function`によって呼んでいます。
+`defaultFallback`の中身は以下の様な感じになっており、`register_shutdown_function`を使って呼んでいます。
 
 ```php
   public static function defaultFallback()
   {
-    if (!headers_sent()) {
-      header($_SERVER['SERVER_PROTOCOL'] . ' 404 Not Found');
-    }
+    header($_SERVER['SERVER_PROTOCOL'] . ' 404 Not Found');
     echo '404 Not Found';
   }
 ```

@@ -2,45 +2,152 @@
 
 namespace kamiyakei;
 
+use \kamiyakei\LaralikeRoute;
+
+register_shutdown_function(function () {
+  if (LaralikeRouter::$is_test_mode) { return; }
+  $uri = $_SERVER['REQUEST_URI'];
+  $method = $_SERVER['REQUEST_METHOD'];
+  LaralikeRouter::routing($uri, $method);
+});
+
 class LaralikeRouter
 {
   const METHODS = ['get', 'post', 'put', 'delete', 'patch', 'connect', 'head', 'options', 'trace'];
 
-  private static $is_init = false;
-  private static $is_found = false;
   private static $fallback;
   private static $view;
 
   private static $namespace = 'App\\Controller\\';
-  public static $prefix = '';
-  public static $uri = '';
-  private static $method = '';
-  private static $middleware = [];
-  private static $configs = [];
 
-  public static function init()
+  private static $routes = [];
+  public static $is_test_mode = false;
+
+  public static $prefix = '';
+  public static $where = [];
+  public static $middleware = [];
+
+  /* phpunitによるtest用 */
+  public static function setTestMode($is_test_mode=true)
   {
-    if (self::$is_init) { return; }
-    if ('' === self::$uri) {
-      self::$uri = $_SERVER['REQUEST_URI'];
-      self::$method = strtolower($_SERVER['REQUEST_METHOD']);
+    self::$is_test_mode = $is_test_mode;
+  }
+
+  public static function routing(string $uri, string $method = 'get', bool $is_nest=false): bool
+  {
+    if (!$is_nest) {
+      self::$prefix = '';
+      self::$where = [];
+      self::$middleware = [];
     }
-    self::$uri = explode('?', self::$uri)[0];
-    self::$uri = rawurldecode(self::$uri);
-    register_shutdown_function(function () {
-      if (self::$is_found) { return; }
-      if (isset(self::$fallback)) {
-        call_user_func_array(self::$fallback, []);
-      } else {
-        self::defaultFallback();
+
+    $method = strtolower($method);
+    assert(in_array($method, self::METHODS), 'method is incorrect');
+    $uri = explode('?', $uri)[0];
+    $uri = rawurldecode($uri);
+
+    // r(self::$routes);
+    // $is_found = false;
+    foreach (self::$routes as $route) {
+      $type = $route->getType();
+      // r($route);
+      // r(self::$prefix);
+      switch ($type) {
+      case 'routing':
+        $is_hit = $route->isHit($uri, $method);
+        if ($is_hit) {
+          // $is_found = true;
+          foreach (self::$middleware as $middleware) {
+            $middleware_ = self::getCallable($middleware);
+            $res_middleware = call_user_func_array($middleware_, []);
+            self::returnAction($res_middleware);
+          }
+          $res = $route->runCallback();
+          self::returnAction($res);
+          return true;
+        }
+        break;
+      case 'prefix':
+        self::$prefix = $route->prefix;
+        self::$where = array_merge(self::$where, $route->where ?? []);
+        break;
+      case 'middleware':
+        self::$middleware = array_merge(self::$middleware, $route->middleware);
+        break;
+      case 'group':
+        $is_hit_group = $route->isHitGroup($uri, $method);
+        if (!$is_hit_group) { break; }
+        // backup
+        $prefix_ = self::$prefix;
+        $where_ = self::$where;
+        $middleware_ = self::$middleware;
+        // set
+        self::$prefix .= $route->prefix;
+        self::$where = array_merge(self::$where, $route->where ?? []);
+        self::$middleware = array_merge(self::$middleware, $route->middleware);
+        // routing
+        $routes_ = self::$routes;
+        self::$routes = [];
+        $res = $route->runCallback();
+        $is_hit = self::routing($uri, $method, true); // 再帰
+        if ($is_hit) { return true; }
+        self::$routes = $routes_;
+        // reset
+        self::$prefix = $prefix_;
+        self::$where = $where_;
+        self::$middleware = $middleware_;
+        break;
+      default:
+        assert(false, 'invalid type: ' . $type);
       }
-    });
-    self::$is_init = true;
+    }
+    if ($is_nest) { return false; }
+    // if ($is_found) { return; }
+    if (isset(self::$fallback)) {
+      $res_fallback = call_user_func_array(self::$fallback, []);
+    } else {
+      $res_fallback = self::defaultFallback();
+    }
+    self::returnAction($res_fallback);
+    return false;
+  }
+
+  public static function returnAction($res): void
+  {
+    $type = gettype($res);
+    switch ($type) {
+      case 'boolean':
+      case 'integer':
+      case 'double':
+        echo (string)$res;
+        break;
+      case 'string':
+        echo $res;
+        break;
+      case 'array':
+        self::json($res);
+        break;
+      // case 'object':
+      // case 'resource':
+      // case 'resource (closed)':
+      // case 'NULL':
+      // case 'unknown type':
+      default:
+        break;
+    }
+  }
+
+  public static function json(array $data): void
+  {
+    if (!self::$is_test_mode) {
+      header('Content-Type: application/json; charset=utf-8');
+    }
+    echo json_encode($data);
   }
 
   public static function defaultFallback()
   {
-    if (!headers_sent()) {
+    if (!self::$is_test_mode) { // && !headers_sent()
       header($_SERVER['SERVER_PROTOCOL'] . ' 404 Not Found');
     }
     echo '404 Not Found';
@@ -48,23 +155,10 @@ class LaralikeRouter
 
   public static function setNamespace(string $namespace)
   {
-    self::init();
     self::$namespace = $namespace;
   }
 
-  public static function setPrefix(string $prefix)
-  {
-    self::init();
-    self::$prefix .= $prefix;
-    if ('' === $prefix) { return; }
-    if (0 !== strpos(self::$uri, $prefix)) {
-      self::$uri = '';
-      return;
-    }
-    self::$uri = substr(self::$uri, strlen($prefix));
-  }
-
-  private static function getCallable($callback): callable
+  public static function getCallable($callback)
   {
     if ('string' === gettype($callback)) {
       $callback = str_replace('@', '::', $callback);
@@ -76,209 +170,125 @@ class LaralikeRouter
     if (is_callable($callback_)) {
       return $callback_;
     }
-    assert(false, $callback_ . ' is not callable!');
+    return false;
   }
 
-  private static function checkUri($uri, $where)
-  {
-    if (false === strpos($uri, '{')) {
-      // var_dump([$uri, self::$uri]);
-      return [$uri === self::$uri, []];
-    }
-
-    $uri_ptn = $uri;
-    foreach ($where as $key => $val) {
-      $uri_ptn = str_replace('{' . $key . '?}', '(?P<' . $key . '>' . $val . ')?', $uri_ptn);
-      $uri_ptn = str_replace('{' . $key . '}', '(?P<' . $key . '>' . $val . ')', $uri_ptn);
-    }
-    $uri_ptn = str_replace('{', '(?P<', $uri_ptn);
-    $uri_ptn = str_replace('?}', '>.+?)?', $uri_ptn);
-    $uri_ptn = str_replace('}', '>.+?)', $uri_ptn);
-    $uri_ptn = '/^' . str_replace('/', '\\/', $uri_ptn) . '$/';
-
-    $parameters = [];
-    preg_match($uri_ptn, self::$uri, $matches);
-    // r([$uri_ptn, self::$uri, $matches]);
-    foreach ($matches as $key => $val) {
-      if ($key === 0) { continue; }
-      if (is_numeric($key)) {
-        $parameters[] = $val;
-        continue;
-      }
-      if (false !== strpos($val, '/')) {
-        return [false, []];
-      }
-    }
-    return [count($matches) !== 0, $parameters];
-  }
-
-  public static function match(array $methods, string $uri, $callback, array $options = [])
+  public static function match(array $methods, string $uri, $callback): LaralikeRoute
   {
     assert(count(array_filter($methods, function ($val) {
       return !in_array($val, self::METHODS);
-    })) === 0, '$methods is incorrect value !');
-    self::init();
+    })) === 0, 'methods is incorrect value !');
+    assert(is_callable($callback) || gettype($callback) === 'string', 'callback is incurrect type !');
+    assert(self::getCallable($callback) !== false, 'not callable ! `' . $uri . '`');
+    $route = new LaralikeRoute($methods, $uri, $callback);
+    self::$routes [] = $route;
+    return $route;
+  }
+
+  public static function get(string $uri, $callback): LaralikeRoute
+  {
+    return self::match(['get'], $uri, $callback);
+  }
+
+  public static function post(string $uri, $callback): LaralikeRoute
+  {
+    return self::match(['post'], $uri, $callback);
+  }
+
+  public static function put(string $uri, $callback): LaralikeRoute
+  {
+    return self::match(['put'], $uri, $callback);
+  }
+
+  public static function patch(string $uri, $callback): LaralikeRoute
+  {
+    return self::match(['patch'], $uri, $callback);
+  }
+
+  public static function delete(string $uri, $callback): LaralikeRoute
+  {
+    return self::match(['delete'], $uri, $callback);
+  }
+
+  public static function options(string $uri, $callback): LaralikeRoute
+  {
+    return self::match(['options'], $uri, $callback);
+  }
+
+  public static function any(string $uri, $callback): LaralikeRoute
+  {
+    return self::match(self::METHODS, $uri, $callback);
+  }
+
+  public static function fallback($fallback)
+  {
+    assert(self::getCallable($fallback),  'not callable !');
+    self::$fallback = $fallback;
+  }
+
+  public static function middleware(array $middleware): LaralikeRoute
+  {
+    assert(!in_array(false, array_map('self::getCallable' , $middleware)), 'not callable !');
+    $route = new LaralikeRoute(self::METHODS);
+    $route->middleware($middleware);
+    self::$routes[] = $route;
+    return $route;
+  }
+
+  public static function domain(string $domain): LaralikeRoute
+  {
+    $route = new LaralikeRoute(self::METHODS);
+    $route->domain($domain);
+    self::$routes[] = $route;
+    return $route;
+  }
+
+  public static function prefix(string $prefix): LaralikeRoute
+  {
+    $route = new LaralikeRoute(self::METHODS);
+    $route->prefix($prefix);
+    self::$routes[] = $route;
+    return $route;
+  }
+
+  public static function redirect(string $uri, string $jumpto, int $status_code=302): LaralikeRoute
+  {
+    assert(in_array($status_code, [300, 301, 302, 303, 304, 307, 308]), '$status_code is incorrect');
+    $route = new LaralikeRoute(self::METHODS, $uri);
+    $route->redirect($jumpto, $status_code);
+    self::$routes[] = $route;
+    return $route;
+  }
+
+  public static function permanentRedirect(string $uri, string $jumpto): LaralikeRoute
+  {
+    return self::redirect($uri, $jumpto, 301);
+  }
+
+  public static function runRedirect(string $jumpto, int $status_code=302)
+  {
+    assert(in_array($status_code, [300, 301, 302, 303, 304, 307, 308]), '$status_code is incorrect');
+    header('Location:' . self::$prefix . $jumpto, true, $status_code);
+    exit(0);
+  }
+
+  public static function setView($callback): void
+  {
     $callback_ = self::getCallable($callback);
-
-    if (self::$is_found) { return; }
-    if (!in_array(self::$method, $methods)) { return; }
-
-    if ('/' !== substr($uri, 0, 1)) {
-      $uri = '/' . $uri;
-    }
-    $res = self::checkUri($uri, $options['where'] ?? []);
-    // r($res);
-    if (!$res[0]) { return; }
-
-    self::$is_found = true;
-    foreach (self::$middleware as $middleware) {
-      $middleware_ = self::getCallable($middleware);
-      call_user_func_array($middleware_, []);
-    }
-    return call_user_func_array($callback_, $res[1]);
-  }
-
-  /* $callback: string|callable */
-  public static function get(string $uri, $callback, array $options = [])
-  {
-    return self::match(['get'], $uri, $callback, $options);
-  }
-
-  public static function post(string $uri, $callback, array $options = [])
-  {
-    return self::match(['post'], $uri, $callback, $options);
-  }
-
-  public static function put(string $uri, $callback, array $options = [])
-  {
-    return self::match(['put'], $uri, $callback, $options);
-  }
-
-  public static function patch(string $uri, $callback, array $options = [])
-  {
-    return self::match(['patch'], $uri, $callback, $options);
-  }
-
-  public static function delete(string $uri, $callback, array $options = [])
-  {
-    return self::match(['delete'], $uri, $callback, $options);
-  }
-
-  public static function options(string $uri, $callback, array $options = [])
-  {
-    return self::match(['options'], $uri, $callback, $options);
-  }
-
-  public static function any(string $uri, $callback, array $options = [])
-  {
-    return self::match(self::METHODS, $uri, $callback, $options);
-  }
-
-  public static function fallback($callback)
-  {
-    self::init();
-    self::$fallback = self::getCallable($callback);
-  }
-
-  public static function middleware(array $middleware)
-  {
-    self::init();
-    self::$middleware = array_merge(self::$middleware, $middleware);
-  }
-
-  public static function group(string $prefix, array $middleware, callable $callback)
-  {
-    self::init();
-
-    if ('/' !== substr($prefix, 0, 1)) {
-      $prefix = '/' . $prefix;
-    }
-
-    $_namespace = self::$namespace;
-    $_prefix = self::$prefix;
-    $_uri = self::$uri;
-    $_middleware = self::$middleware;
-
-    self::setPrefix($prefix);
-    if (self::$uri !== '') {
-      self::middleware($middleware);
-      $callback_ = self::getCallable($callback);
-      call_user_func_array($callback_, []);
-    }
-
-    self::$namespace = $_namespace;
-    self::$prefix = $_prefix;
-    self::$uri = $_uri;
-    self::$middleware = $_middleware;
-  }
-
-  public static function current()
-  {
-    return self::$prefix . self::$uri;
-  }
-
-  /* $jumpto: string|int */
-  public static function redirect(string $uri, $jumpto=302, int $status_code=302)
-  {
-    // 引数が1個、または、2個で2個めがintegerの時：即座にリダイレクト
-    if (gettype($jumpto) === 'integer') {
-      $status_code = $jumpto;
-      assert(in_array($status_code, [300, 301, 302, 303, 304, 307, 308]), '$status_code is incorrect');
-      header('Location:' . self::$prefix . $uri, true, $status_code);
-      exit(0);
-    }
-    // 引数が2個で2個目がstring、または、引数が3個の時：ルーティングをチェックしてマッチすればリダイレクト
-    self::any($uri, function () use ($jumpto, $status_code) {
-      assert(in_array($status_code, [300, 301, 302, 303, 304, 307, 308]), '$status_code is incorrect');
-      // r(self::$prefix . $jumpto);
-      header('Location:' . self::$prefix . $jumpto, true, $status_code);
-      exit(0);
-    });
-  }
-
-  public static function permanentRedirect(string $uri, string $jumpto='')
-  {
-    if ('' === $jumpto) {
-      self::redirect($uri, 301);
-    } else {
-      self::redirect($uri, $jumpto, 301);
-    }
-  }
-
-  public static function setView($callback)
-  {
-    self::init();
-    $callback_ = self::getCallable($callback);
+    assert($callback_ !== false, 'not callable !');
     self::$view = $callback_;
   }
 
-  public static function view(string $uri, string $viewfile, array $parameters = [], array $options = [])
+  public static function view(string $uri, string $viewfile, array $parameters = [])
   {
     assert(isset(self::$view), 'view is not setting yet. please setView()');
-    echo self::match(
+    return self::match(
       $options['methods'] ?? self::METHODS,
       $uri,
       function () use ($viewfile, $parameters) {
         return call_user_func_array(self::$view, [$viewfile, $parameters]);
-      },
-      $options
+      }
     );
   }
 
-  public static function json(array $data)
-  {
-    self::init();
-    header('Content-Type: application/json; charset=utf-8');
-    return json_encode($data);
-  }
-
-  public static function config(string $key, ?string $value=null)
-  {
-    self::init();
-    if(is_null($value)) {
-      return self::$configs[$key];
-    }
-    self::$configs[$key] = $value;
-    return $value;
-  }
 }
