@@ -10,15 +10,19 @@ class LaralikeRoute
   public $uri_ptn;
   public $callback;
   public $where;
-  public $prefix; // (string) 'routing'|'prefix'|'group'
+  public $prefix;
   public $domain;
   public $middleware;
-  public $type;
+  public $type; // (string) 'routing'|'prefix'|'group'|'domain'
 
   public $parameters;
 
-  public function __construct(?array $methods = null, ?string $uri_pattern = null, $callback = null)
-  {
+  public function __construct(
+    ?array $methods = null,
+    ?string $uri_pattern = null,
+    $callback = null, // string|callable
+    ?string $type = null
+  ) {
     $this->methods = $methods;
     $this->uri_ptn = (substr($uri_pattern, 0, 1) === '/' ? '' : '/') . $uri_pattern;
     $this->callback = $callback;
@@ -26,6 +30,7 @@ class LaralikeRoute
     $this->prefix = '';
     $this->middleware = [];
     $this->parameters = [];
+    $this->type = $type;
   }
 
   public function getType(): string
@@ -74,10 +79,17 @@ class LaralikeRoute
 
   public function runRoute(): void
   {
+    // global middleware and group middleware
     foreach (Route::$middleware as $middleware) {
       $res_middleware = Route::runCallback($middleware, $this->parameters);
       Route::returnAction($res_middleware);
     }
+    // route middleware
+    foreach ($this->middleware as $middleware) {
+      $res_middleware = Route::runCallback($middleware, $this->parameters);
+      Route::returnAction($res_middleware);
+    }
+    // route callback
     $res = Route::runCallback($this->callback, $this->parameters);
     Route::returnAction($res);
   }
@@ -87,11 +99,13 @@ class LaralikeRoute
     call_user_func_array($this->callback, []);
   }
 
-  public function redirect(string $jumpto, int $status_code) {
+  public function redirect(string $jumpto, int $status_code): self {
+    $this->type = 'routing';
     $this->callback = function () use ($jumpto, $status_code) {
       header('Location:' . Route::$prefix . $this->prefix . $jumpto, true, $status_code);
       exit(0);
     };
+    return $this;
   }
 
   public function where($key, ?string $ptn=null): self
@@ -110,10 +124,11 @@ class LaralikeRoute
   {
     if ($prefix === '' || $prefix === '/') { return $this; }
     $this->prefix = (substr($prefix, 0, 1) === '/' ? '' : '/') . $prefix;
-    $this->type = 'prefix';
+    $this->type = $this->type ?? 'prefix';
     return $this;
   }
 
+  // 未実装
   public function domain(string $domain): self
   {
     $this->domain = $domain;

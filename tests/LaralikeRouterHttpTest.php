@@ -129,4 +129,13 @@ class LaralikeRouterHttpTest extends TestCase
     $this->assertEquals('{"name":"star"}', self::request($uri . '/view/json'));
   }
 
+  /**
+   * @dataProvider provider
+   */
+  public function testMiddleware($uri)
+  {
+    $this->assertEquals('GLOVAL_MW FOO', self::request($uri . '/mw?mw'));
+    $this->assertEquals('GLOVAL_MW GROUP_MW BAR', self::request($uri . '/mwg/?mw'));
+    $this->assertEquals('GLOVAL_MW GROUP_MW ROUTE_MW BAZ', self::request($uri . '/mwg/baz?mw'));
+  }
 }

@@ -19,8 +19,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "laralike\\": "src/",
-            "App\\Controller\\": "tests/"
+            "App\\Http\\Controllers\\": "tests/"
         }
     },
     "scripts": {

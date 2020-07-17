@@ -18,7 +18,7 @@ class LaralikeRouter
   private static $fallback;
   private static $view;
 
-  private static $namespace = 'App\\Controller\\';
+  private static $namespace = 'App\\Http\\Controllers\\';
 
   private static $routes = [];
   public static $is_test_mode = false;
@@ -181,7 +181,6 @@ class LaralikeRouter
     return call_user_func_array($callback, $parameters);
   }
 
-
   public static function getInstance(string $class)
   {
     foreach (self::$instances as $instance) {
@@ -201,7 +200,7 @@ class LaralikeRouter
     })) === 0, 'methods is incorrect value !');
     assert(is_callable($callback) || 'string' === gettype($callback), 'callback is invalid type !');
     assert(false !== self::getCallable($callback), 'not callable ! `' . $uri . '`');
-    $route = new LaralikeRoute($methods, $uri, $callback);
+    $route = new LaralikeRoute($methods, $uri, $callback, 'routing');
     self::$routes [] = $route;
     return $route;
   }
@@ -256,6 +255,7 @@ class LaralikeRouter
     return $route;
   }
 
+  // 未実装
   public static function domain(string $domain): LaralikeRoute
   {
     $route = new LaralikeRoute(self::METHODS);

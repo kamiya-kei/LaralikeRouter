@@ -7,7 +7,7 @@
 
 
 
-# git tag / packagist
+# git tag
 
 + タグ一覧: `git tag`
 + タグ追加&push : `git tag v1.0.0`, `git push origin v1.0.0`

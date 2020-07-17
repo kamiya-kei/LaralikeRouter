@@ -6,7 +6,7 @@
 
 composerを使って導入できます。PHPのバージョンは7.1以上が必要です。
 
-GitHub:  [laralike/LaralikeRouter](https://github.com/laralike/LaralikeRouter)
+GitHub:  [kamiya-kei/LaralikeRouter](https://github.com/kamiya-kei/LaralikeRouter)
 
 ## 導入方法
 
@@ -19,9 +19,9 @@ composer require laralike/laralike-router
 ```php
 <?php
 
-use \kamiyakei\LaralikeRouter as Route;
+use \laralike\LaralikeRouter as Route;
 
-require_once 'vendor/autoload.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
 Route::get('/', function () { echo 'hello milky'; });
 ```
@@ -61,6 +61,7 @@ Route::get('/', '\App\Controller\TestController@index');
 ```
 
 省略して書く場合は以下の様にコントローラーの`namespace`を設定します。
+デフォルトでは`App\Http\Controllers\`が設定されています。
 
 ```php
 Route::setNamespace('\\App\\Controller\\');
@@ -118,10 +119,10 @@ function view ($viewfile, $parameters) {
   ]);
   return $twig->render($viewfile, $parameters);
 }
-Route::setView('view');
+Route::setView(view:class);
 Route::prefix('/view')->group(function () {
   // 以下の様に使用するなら`Route::setView`は不要です。
-  Route::get('/twig1', function () { echo view('test.html.twig', ['name' => 'lala']); });
+  Route::get('/twig1', function () { return view('test.html.twig', ['name' => 'lala']); });
   // 以下の様ビュールートを使用する場合は`Route::setView`で予め設定する必要がある。
   Route::view('/twig2', 'test.html.twig', ['name' => 'milky']);
 });
@@ -162,15 +163,17 @@ Route::get('user/{name?}', function ($name = 'lala') {
 #### 正規表現制約
 
 正規表現制約は以下の様に定義します。
+whereには必ず連想配列を渡してください。
 
 ```php
 Route::get('user/{id}', function ($id) {
     //
 })->where(['id' => '[0-9]+']);
+// NG: ->where('id', '[0-9]+');
 
 Route::get('user/{id}/{name}', function ($id) {
     //
-})->where(['where' => ['id' => '[0-9]+', 'name' => '[a-z]+']);
+})->where(['id' => '[0-9]+', 'name' => '[a-z]+']);
 ```
 
 
@@ -222,7 +225,7 @@ Route::fallback(function () {
 
 定義しなかった場合、自動で`Route::defaultFallback()`が呼ばれます。
 
-`defaultFallback`の中身は以下の様な感じになっており、`register_shutdown_function`を使って呼んでいます。
+`defaultFallback`の中身は以下の様な感じになっています。
 
 ```php
   public static function defaultFallback()

@@ -4,8 +4,10 @@ use laralike\LaralikeRouter as Route;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-ini_set('assert.exception', '1');
-error_reporting(E_ALL | E_STRICT);
+error_reporting(E_ALL); // 全てのエラーを出力
+ini_set('zend.assertions', '1'); // assertを有効化
+ini_set('assert.exception', '1'); // assertで失敗した時にエラーになるようにする
+// エラー画面を見やすくする - filp/whoops
 // $whoops = new Whoops\Run;
 // $whoops->pushHandler(new \Whoops\Handler\PrettyPageHandler);
 // $whoops->register();
@@ -26,8 +28,8 @@ Route::redirect('index.php', '/');
 Route::get('index.html', function () { Route::runRedirect('/'); });
 
 // コントローラー
-Route::get('/ctrl1', '\App\Controller\TestController@test1');
-Route::setNamespace('\\App\\Controller\\');
+Route::get('/ctrl1', '\App\Http\Controllers\TestController@test1');
+Route::setNamespace('\\App\\Http\\Controllers\\');
 Route::get('/ctrl2', 'TestController@test2');
 
 // 必須パラメータ
@@ -50,16 +52,14 @@ Route::get('userage/{age}', function ($age) {
 Route::prefix('group1')
   ->middleware([function () { echo 'GROUP 1 '; }])
   ->group(function () {
-    define('GROUP_VAR', 'BAR');
     Route::get('/foo', function () { echo 'FOO'; });
-    Route::get('/bar', function () { return GROUP_VAR; });
+    Route::get('/bar', function () { return 'BAR'; });
   });
 
 Route::middleware([function () { return 'GROUP 2 '; }])
   ->prefix('/group2')
   ->group(function () {
-    define('GROUP_VAR', 'BAZ');
-    Route::get('/baz', function () { return GROUP_VAR; });
+    Route::get('/baz', function () { return 'BAZ'; });
     Route::prefix('/nest')
       ->middleware([function () { return 'NEST '; }])
       ->group(function () {
@@ -104,6 +104,19 @@ Route::prefix('/view')->group(function () {
   Route::view('/twig2', 'test.html.twig', ['name' => 'milky']);
   Route::get('/json', function () { return ['name' => 'star']; });
 });
+
+// ミドルウェア
+if (isset($_GET['mw'])) {
+  Route::middleware([function () { return 'GLOVAL_MW '; }]);
+  Route::get('/mw', function () { return 'FOO'; });
+  Route::prefix('/mwg')
+    ->middleware([function () { return 'GROUP_MW '; }])
+    ->group(function () {
+      Route::get('/', function () { return 'BAR'; });
+      Route::get('/baz', function () { return 'BAZ'; })
+        ->middleware([function () { return 'ROUTE_MW '; }]);
+    });
+}
 
 // パフォーマンステスト
 $pf = $_GET['performance'] ?? false;
