@@ -26,6 +26,7 @@ class LaralikeRouter
   public static $prefix = '';
   public static $where = [];
   public static $middleware = [];
+  public static $instances = [];
 
   /* phpunitによるtest用 */
   public static function setTestMode($is_test_mode=true)
@@ -47,23 +48,15 @@ class LaralikeRouter
     $uri = rawurldecode($uri);
 
     // r(self::$routes);
-    // $is_found = false;
     foreach (self::$routes as $route) {
       $type = $route->getType();
-      // r($route);
-      // r(self::$prefix);
+      // var_dump([$route, self::$prefix]);
       switch ($type) {
       case 'routing':
         $is_hit = $route->isHit($uri, $method);
         if ($is_hit) {
-          // $is_found = true;
-          foreach (self::$middleware as $middleware) {
-            $middleware_ = self::getCallable($middleware);
-            $res_middleware = call_user_func_array($middleware_, []);
-            self::returnAction($res_middleware);
-          }
-          $res = $route->runCallback();
-          self::returnAction($res);
+          $route->runRoute();
+          // r(self::$instances);
           return true;
         }
         break;
@@ -81,30 +74,29 @@ class LaralikeRouter
         $prefix_ = self::$prefix;
         $where_ = self::$where;
         $middleware_ = self::$middleware;
+        $routes_ = self::$routes;
         // set
         self::$prefix .= $route->prefix;
         self::$where = array_merge(self::$where, $route->where ?? []);
         self::$middleware = array_merge(self::$middleware, $route->middleware);
-        // routing
-        $routes_ = self::$routes;
         self::$routes = [];
-        $res = $route->runCallback();
+        // routing
+        $route->runGroup();
         $is_hit = self::routing($uri, $method, true); // 再帰
         if ($is_hit) { return true; }
-        self::$routes = $routes_;
         // reset
         self::$prefix = $prefix_;
         self::$where = $where_;
         self::$middleware = $middleware_;
+        self::$routes = $routes_;
         break;
       default:
         assert(false, 'invalid type: ' . $type);
       }
     }
     if ($is_nest) { return false; }
-    // if ($is_found) { return; }
     if (isset(self::$fallback)) {
-      $res_fallback = call_user_func_array(self::$fallback, []);
+      $res_fallback = self::runCallback(self::$fallback, []);
     } else {
       $res_fallback = self::defaultFallback();
     }
@@ -160,17 +152,46 @@ class LaralikeRouter
 
   public static function getCallable($callback)
   {
-    if ('string' === gettype($callback)) {
-      $callback = str_replace('@', '::', $callback);
+    if ('string' === gettype($callback) && false !== strpos($callback, '@')) {
+      [$class, $method] = explode('@', $callback);
+      if (method_exists($class, $method)) {
+        return [$class, $method];
+      }
+      $class_ = self::$namespace . $class;
+      if (method_exists($class_, $method)) {
+        return [$class_, $method];
+      }
+      return false;
     }
     if (is_callable($callback)) {
       return $callback;
     }
-    $callback_ = self::$namespace . $callback;
-    if (is_callable($callback_)) {
-      return $callback_;
-    }
     return false;
+  }
+
+  public static function runCallback($callback, $parameters)
+  {
+    $callback = self::getCallable($callback);
+    assert($callback !== false,  'not callable !');
+    if ('array' === gettype($callback)) {
+      [$class, $method] = $callback;
+      $instance = self::getInstance($class);
+      return call_user_func_array([$instance, $method], $parameters);
+    }
+    return call_user_func_array($callback, $parameters);
+  }
+
+
+  public static function getInstance(string $class)
+  {
+    foreach (self::$instances as $instance) {
+      if ($instance instanceof $class) {
+        return $instance;
+      }
+    }
+    $instance_ = new $class;
+    self::$instances[] = $instance_;
+    return $instance_;
   }
 
   public static function match(array $methods, string $uri, $callback): LaralikeRoute
@@ -178,8 +199,8 @@ class LaralikeRouter
     assert(count(array_filter($methods, function ($val) {
       return !in_array($val, self::METHODS);
     })) === 0, 'methods is incorrect value !');
-    assert(is_callable($callback) || gettype($callback) === 'string', 'callback is incurrect type !');
-    assert(self::getCallable($callback) !== false, 'not callable ! `' . $uri . '`');
+    assert(is_callable($callback) || 'string' === gettype($callback), 'callback is invalid type !');
+    assert(false !== self::getCallable($callback), 'not callable ! `' . $uri . '`');
     $route = new LaralikeRoute($methods, $uri, $callback);
     self::$routes [] = $route;
     return $route;

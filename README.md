@@ -26,18 +26,6 @@ require_once 'vendor/autoload.php';
 Route::get('/', function () { echo 'hello milky'; });
 ```
 
-
-
-```php
-<?php
-
-require_once 'LaralikeRouter.php';
-
-class_alias(\kamiyakei\LaralikeRouter::class, 'Route');
-
-Route::get('/', function () { echo 'hello milky'; });
-```
-
 `.htaccess`等を利用し、全てのアクセスをルーティングを書いてるphpに飛ばす様にしておく。
 
 ```.htaccess

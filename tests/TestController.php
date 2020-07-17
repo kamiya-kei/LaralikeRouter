@@ -2,16 +2,23 @@
 
 namespace App\Controller;
 
-class TestController
+use \kamiyakei\LaralikeBaseController as Controller;
+
+class TestController extends Controller
 {
-  public static function test1()
+  public function __construct()
   {
-    return 'CONTROLLER TEST 1';
+    $this->msg = 'CONTROLLER TEST ';
   }
 
-  public static function test2()
+  public function test1()
   {
-    return 'CONTROLLER TEST 2';
+    return $this->msg.'1';
+  }
+
+  public function test2()
+  {
+    return $this->msg.'2';
   }
 
 }

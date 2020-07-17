@@ -43,27 +43,22 @@ class LaralikeRoute
       return $uri === $uri_ptn;
     }
 
+    $uri_ptn = str_replace('?}', '}?', $uri_ptn);
     foreach ($this->where as $key => $ptn) {
-      $uri_ptn = str_replace('{' . $key . '?}', '(?P<' . $key . '>' . $ptn . ')?', $uri_ptn);
       $uri_ptn = str_replace('{' . $key . '}', '(?P<' . $key . '>' . $ptn . ')', $uri_ptn);
     }
     $uri_ptn = str_replace('{', '(?P<', $uri_ptn);
-    $uri_ptn = str_replace('?}', '>[^/]+?)?', $uri_ptn);
-    $uri_ptn = str_replace('}', '>[^/]+?)', $uri_ptn);
+    $uri_ptn = str_replace('}', '>[^/]+)', $uri_ptn);
     $uri_ptn = '/^' . str_replace('/', '\\/', $uri_ptn) . '$/';
 
-    $parameters = [];
     preg_match($uri_ptn, $uri, $matches);
     // r([$uri_ptn, self::$uri, $matches]);
-    foreach ($matches as $key => $val) {
-      if ($key === 0) { continue; }
-      if (is_numeric($key)) {
-        $parameters[] = $val;
-        continue;
-      }
-    }
-    $this->parameters = $parameters;
-    return count($matches) !== 0;
+    if (count($matches) === 0) { return false; }
+
+    $this->parameters = array_filter($matches, function ($key) {
+      return is_numeric($key) && $key !== 0;
+    }, ARRAY_FILTER_USE_KEY);
+    return true;
   }
 
   public function isHitGroup(string $uri, string $method): bool
@@ -77,11 +72,19 @@ class LaralikeRoute
     return false;
   }
 
-  public function runCallback()
+  public function runRoute(): void
   {
-    $callback = Route::getCallable($this->callback);
-    assert($callback !== false,  'not callable !');
-    return call_user_func_array($callback, $this->parameters);
+    foreach (Route::$middleware as $middleware) {
+      $res_middleware = Route::runCallback($middleware, $this->parameters);
+      Route::returnAction($res_middleware);
+    }
+    $res = Route::runCallback($this->callback, $this->parameters);
+    Route::returnAction($res);
+  }
+
+  public function runGroup(): void
+  {
+    call_user_func_array($this->callback, []);
   }
 
   public function redirect(string $jumpto, int $status_code) {

@@ -28,7 +28,7 @@ Route::get('index.html', function () { Route::runRedirect('/'); });
 // コントローラー
 Route::get('/ctrl1', '\App\Controller\TestController@test1');
 Route::setNamespace('\\App\\Controller\\');
-Route::get('/ctrl2', 'TestController::test2');
+Route::get('/ctrl2', 'TestController@test2');
 
 // 必須パラメータ
 Route::get('user/{id}', function ($id) { return 'UserId: ' . $id; });
@@ -104,3 +104,17 @@ Route::prefix('/view')->group(function () {
   Route::view('/twig2', 'test.html.twig', ['name' => 'milky']);
   Route::get('/json', function () { return ['name' => 'star']; });
 });
+
+// パフォーマンステスト
+$pf = $_GET['performance'] ?? false;
+if ($pf === '1') {
+  define('LARALIKE_START', microtime(true));
+  for ($i = 1;  $i <= 10000; $i++) {
+    Route::get('/pf/' . (string)$i, function () use ($i) {  return $i . '...' . (string)(microtime(true) - LARALIKE_START); });
+  }
+} else if ($pf === '2') {
+  define('LARALIKE_START', microtime(true));
+  for ($i = 1;  $i <= 10000; $i++) {
+    Route::get('/pf/{id}/' . (string)$i, function ($id) use ($i) {  return $id . $i . '...' . (string)(microtime(true) - LARALIKE_START); });
+  }
+}
