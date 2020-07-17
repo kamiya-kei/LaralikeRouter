@@ -41,13 +41,27 @@ class LaralikeRoute
   public function isHit(string $uri, string $method): bool
   {
     if (!in_array($method, $this->methods)) { return false; }
-
     $uri_ptn = Route::$prefix . $this->prefix . $this->uri_ptn;
     // r([$uri_ptn, $this]);
+
+    // 任意パラメータ無し
     if (false === strpos($uri_ptn, '{')) {
       return $uri === $uri_ptn;
     }
 
+    // 任意パラメータ有り
+    // まずは任意パラメータ以外の部分をチェック (パフォーマンス向上の為)
+    $i = 0;
+    foreach (explode('{', $uri_ptn) as $tmp) {
+      foreach (explode('}', $tmp) as $string) {
+        if ($i % 2 == 0 && strlen($string) !== 0 && strpos($uri, $string) === false) {
+          return false;
+        }
+        $i++;
+      }
+    }
+
+    // 任意パラメータの部分を含めたチェック
     $uri_ptn = str_replace('?}', '}?', $uri_ptn);
     foreach ($this->where as $key => $ptn) {
       $uri_ptn = str_replace('{' . $key . '}', '(?P<' . $key . '>' . $ptn . ')', $uri_ptn);
