@@ -1,5 +1,5 @@
 {
-    "name": "kamiya-kei/laralike-router",
+    "name": "laralike/laralike-router",
     "description": "simple router like laravel",
     "type": "library",
     "require": {
@@ -14,12 +14,12 @@
     },
     "autoload": {
         "psr-4": {
-            "kamiyakei\\": "src/"
+            "laralike\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "kamiyakei\\": "src/",
+            "laralike\\": "src/",
             "App\\Controller\\": "tests/"
         }
     },
@@ -38,6 +38,13 @@
         ],
         "updtautoload": [
             "composer dump-autoload"
+        ],
+        "tag": [
+            "git tag",
+            "git push origin"
+        ],
+        "pushtags": [
+            "git push origin --tags"
         ]
     }
 }

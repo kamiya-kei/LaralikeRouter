@@ -2,7 +2,7 @@
 
 namespace App\Controller;
 
-use \kamiyakei\LaralikeBaseController as Controller;
+use \laralike\LaralikeBaseController as Controller;
 
 class TestController extends Controller
 {

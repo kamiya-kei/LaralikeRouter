@@ -1,6 +1,6 @@
 <?php
 
-namespace kamiyakei;
+namespace laralike;
 
 class LaralikeBaseController
 {

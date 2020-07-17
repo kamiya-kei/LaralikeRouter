@@ -6,14 +6,14 @@
 
 composerを使って導入できます。PHPのバージョンは7.1以上が必要です。
 
-GitHub:  [kamiya-kei/LaralikeRouter](https://github.com/kamiya-kei/LaralikeRouter)
+GitHub:  [laralike/LaralikeRouter](https://github.com/laralike/LaralikeRouter)
 
 ## 導入方法
 
 ### 方法1：composerを利用する方法
 
 ```powershell
-composer require kamiya-kei/laralike-router
+composer require laralike/laralike-router
 ```
 
 ```php
@@ -54,7 +54,7 @@ Route::get('bar', function () { return 'BAR'; });
 Route::get('baz', function () { return ['BAZ']; });
 ```
 
-コントローラーを利用する場合は以下の様にします。メソッドの前は`@`ではなく`::`でもOKです。
+コントローラーを利用する場合は以下の様にします。
 
 ```php
 Route::get('/', '\App\Controller\TestController@index');
@@ -161,9 +161,7 @@ Route::get('user/{name?}', function ($name = 'lala') {
 
 #### 正規表現制約
 
-正規表現制約はLaravelと違って第3引数で指定します。
-
-また、Laravelの様に`/`を許可することはできません。
+正規表現制約は以下の様に定義します。
 
 ```php
 Route::get('user/{id}', function ($id) {

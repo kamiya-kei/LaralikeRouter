@@ -1,6 +1,6 @@
 <?php
 
-use \kamiyakei\LaralikeRouter as Route;
+use laralike\LaralikeRouter as Route;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 

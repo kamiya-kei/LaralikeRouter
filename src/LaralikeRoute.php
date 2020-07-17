@@ -1,8 +1,8 @@
 <?php
 
-namespace kamiyakei;
+namespace laralike;
 
-use \kamiyakei\LaralikeRouter as Route;
+use \laralike\LaralikeRouter as Route;
 
 class LaralikeRoute
 {

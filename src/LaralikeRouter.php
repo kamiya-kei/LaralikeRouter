@@ -1,8 +1,8 @@
 <?php
 
-namespace kamiyakei;
+namespace laralike;
 
-use \kamiyakei\LaralikeRoute;
+use \laralike\LaralikeRoute;
 
 register_shutdown_function(function () {
   if (LaralikeRouter::$is_test_mode) { return; }
