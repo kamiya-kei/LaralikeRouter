@@ -20,7 +20,7 @@ class LaralikeRouter
 
   private static $namespace = 'App\\Http\\Controllers\\';
 
-  private static $routes = [];
+  public static $routes = [];
   public static $is_test_mode = false;
 
   public static $prefix = '';

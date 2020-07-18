@@ -7,12 +7,18 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use \laralike\LaralikeRouter as Route;
 use \PHPUnit\Framework\TestCase;
 
-Route::setTestMode();
-include_once __DIR__ . '/index.php';
-
 class LaralikeRouterTest extends TestCase
 {
   protected const MSG_404 = '404 Not Found';
+
+  /**
+   * @before
+   */
+  public static function loadIndex()
+  {
+    Route::setTestMode();
+    include_once __DIR__ . '/index.php';
+  }
 
   protected static function request(string $uri, string $method='GET', array $parameters = [])
   {

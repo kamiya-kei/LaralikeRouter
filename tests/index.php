@@ -117,17 +117,3 @@ if (isset($_GET['mw'])) {
         ->middleware([function () { return 'ROUTE_MW '; }]);
     });
 }
-
-// パフォーマンステスト
-$pf = $_GET['performance'] ?? false;
-if ($pf === '1') {
-  define('LARALIKE_START', microtime(true));
-  for ($i = 1;  $i <= 10000; $i++) {
-    Route::get('/pf/' . (string)$i, function () use ($i) {  return $i . '...' . (string)(microtime(true) - LARALIKE_START); });
-  }
-} else if ($pf === '2') {
-  define('LARALIKE_START', microtime(true));
-  for ($i = 1;  $i <= 10000; $i++) {
-    Route::get('/pf/{id}/' . (string)$i, function ($id) use ($i) {  return $id . $i . '...' . (string)(microtime(true) - LARALIKE_START); });
-  }
-}

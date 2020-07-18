@@ -6,11 +6,12 @@
         "php": "^7.1"
     },
     "require-dev": {
-        "phpunit/phpunit": "^9.2",
-        "guzzlehttp/guzzle": "^7.0",
+        "phpunit/phpunit": "^7.5",
+        "guzzlehttp/guzzle": "^6.5",
         "digitalnature/php-ref": "^1.3",
         "filp/whoops": "^2.7",
-        "twig/twig": "^3.0"
+        "twig/twig": "^2.12",
+        "monolog/monolog": "^1.25"
     },
     "autoload": {
         "psr-4": {
@@ -24,10 +25,15 @@
     },
     "scripts": {
         "// comment": [
-            "usage: ex ) composer test"
+            "usage:",
+            "   ex ) composer test",
+            "   ex ) composer tag v1.0.0"
         ],
         "test": [
-            "php ./vendor/phpunit/phpunit/phpunit --colors"
+            "c:/php/php71/php ./vendor/phpunit/phpunit/phpunit tests/LaralikeRouterHttpTest.php --colors"
+        ],
+        "testpf": [
+            "c:/php/php71/php ./vendor/phpunit/phpunit/phpunit tests/LaralikeRouterPerformanceTest.php --colors"
         ],
         "start": [
             "docker start laralikerouter"
