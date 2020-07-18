@@ -137,34 +137,8 @@ class LaralikeRouterHttpTest extends TestCase
     $this->assertSame('GLOVAL_MW FOO', self::request($uri . '/mw?mw'));
     $this->assertSame('GLOVAL_MW GROUP_MW BAR', self::request($uri . '/mwg/?mw'));
     $this->assertSame('GLOVAL_MW GROUP_MW ROUTE_MW BAZ', self::request($uri . '/mwg/baz?mw'));
-  }
-
-  /**
-   * @dataProvider provider
-   */
-  public function testPerformance($uri)
-  {
-    // パフォーマンスが著しく落ちてないかテストする用(環境依存)
-    // 任意パラメータなし * 10000
-    $NUM = 10;
-    $sum1 = 0;
-    for ($i = 0; $i < $NUM; $i++) {
-      $res1 = self::request($uri . '/pf/10000?performance=1');
-      $arr1 = explode('...', $res1);
-      $sum1 += (float)end($arr1);
-    }
-    $avg1 = $sum1 / $NUM;
-    $this->assertLessThan(0.05, $avg1);
-
-    // 任意パラメータあり * 10000
-    $sum2 = 0;
-    for ($i = 0; $i < $NUM; $i++) {
-      $res2 = self::request($uri . '/pf/foo/10000?performance=2');
-      $arr2 = explode('...', $res2);
-      $sum2 += (float)end($arr2);
-    }
-    $avg2 = $sum2 / $NUM;
-    $this->assertLessThan(0.05, $avg2);
+    $this->assertSame('ONLY MW OK', self::request($uri . '/onlymw'));
+    $this->assertSame('ONLY MW OK2', self::request($uri . '/onlymw2'));
   }
 
 }

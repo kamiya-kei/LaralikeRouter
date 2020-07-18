@@ -6,8 +6,9 @@ use \laralike\LaralikeRoute;
 
 register_shutdown_function(function () {
   if (LaralikeRouter::$is_test_mode) { return; }
+  if (!isset($_SERVER['REQUEST_URI'])) { return; }
   $uri = $_SERVER['REQUEST_URI'];
-  $method = $_SERVER['REQUEST_METHOD'];
+  $method = $_SERVER['REQUEST_METHOD'] ?? 'get';
   LaralikeRouter::routing($uri, $method);
 });
 

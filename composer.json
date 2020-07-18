@@ -30,10 +30,13 @@
             "   ex ) composer tag v1.0.0"
         ],
         "test": [
-            "c:/php/php71/php ./vendor/phpunit/phpunit/phpunit tests/LaralikeRouterHttpTest.php --colors"
+            "c:/php/php71/php ./vendor/phpunit/phpunit/phpunit tests/LaralikeRouterHttpTest.php --debug --colors"
         ],
         "testpf": [
             "c:/php/php71/php ./vendor/phpunit/phpunit/phpunit tests/LaralikeRouterPerformanceTest.php --colors"
+        ],
+        "testall": [
+            "c:/php/php71/php ./vendor/phpunit/phpunit/phpunit --colors"
         ],
         "start": [
             "docker start laralikerouter"
@@ -47,6 +50,10 @@
         "tag": [
             "git tag",
             "git push origin"
+        ],
+        "deltag": [
+            "git tag -d",
+            "git push --delete origin"
         ],
         "pushtags": [
             "git push origin --tags"

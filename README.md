@@ -2,7 +2,7 @@
 
 単体で動作する[Laravel](http://laravel.jp/)ライクなルーティングライブラリを自作しました。
 
-フレームワークを使う程では無い極小規模な開発で、あまり速度を重視しない時に使用することを想定してます。
+フレームワークを使う程では無い極小規模な開発で使用することを想定してます。
 
 composerを使って導入できます。PHPのバージョンは7.1以上が必要です。
 
@@ -26,7 +26,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 Route::get('/', function () { echo 'hello milky'; });
 ```
 
-`.htaccess`等を利用し、全てのアクセスをルーティングを書いてるphpに飛ばす様にしておく。
+`.htaccess`等を利用し、全てのアクセスを`index.php`に飛ばす様にしておく。
 
 ```.htaccess
 RewriteEngine On
@@ -38,6 +38,8 @@ RewriteRule ^ index.php [L]
 ## 使い方
 
 ほとんど[Laravelのルーティング](https://readouble.com/laravel/7.x/ja/routing.html)と同じ使い方です。
+ただし名前付きルート・サブドメインルーティング・モデル結合ルート等一部機能は使えません。
+サンプル: [LaralikeRouter/tests/index.php](https://github.com/kamiya-kei/LaralikeRouter/blob/master/tests/index.php)
 
 ### 基本的なルーティング
 

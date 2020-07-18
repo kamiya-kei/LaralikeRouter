@@ -76,6 +76,13 @@ Route::middleware([function () { return 'GROUP 2 '; }])
 
   });
 
+// ミドルウェアのみのグループ
+Route::middleware([function () { return 'ONLY MW '; }])
+  ->group(function () {
+    Route::get('/onlymw', function () { return 'OK'; });
+    Route::get('/onlymw2', function () { return 'OK2'; });
+  });
+
 // ルートグループ内のリダイレクトルート
 Route::prefix('/redirect')->group(function () {
   Route::get('/', function () { return 'REDIRECT'; });
